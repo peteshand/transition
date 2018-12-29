@@ -1,7 +1,7 @@
 package transition;
 
-import mantle.managers.transition.TransitionObject.Target;
-import mantle.managers.transition.TransitionSettings;
+import transition.TransitionObject.Target;
+import transition.TransitionSettings;
 import motion.easing.Expo;
 import motion.easing.IEasing;
 import motion.easing.Quad;

@@ -198,14 +198,12 @@ class Transition
 			if (showDelay == 0) showJump();
 			else {
 				showDelayTimer = Timer.delay(showJump, Math.floor(showDelay * 1000));
-				showDelayTimer.run();
 			}
 		}
 		else {
 			if (showDelay == 0) showTween();
 			else {
 				showDelayTimer = Timer.delay(showTween, Math.floor(showDelay * 1000));
-				showDelayTimer.run();
 			}
 		}
 	}
@@ -261,14 +259,12 @@ class Transition
 			if (hideDelay == 0) hideJump();
 			else {
 				hideDelayTimer = Timer.delay(hideJump, Math.floor(hideDelay * 1000));
-				hideDelayTimer.run();
 			}
 		}
 		else {
 			if (hideDelay == 0) hideTween();
 			else {
 				hideDelayTimer = Timer.delay(hideTween, Math.floor(hideDelay * 1000));
-				hideDelayTimer.run();
 			}
 		}
 	}
