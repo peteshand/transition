@@ -2,7 +2,8 @@ package transition;
 
 import haxe.Timer;
 import notifier.Notifier;
-import condition.IState;
+//import condition.IState;
+import condition.Condition;
 import motion.Actuate;
 import motion.actuators.GenericActuator;
 import motion.easing.Linear.LinearEaseNone;
@@ -62,15 +63,17 @@ class Transition
 	public var startHidden:Bool = true;
 
 	@:isVar public var value(get, set):Float = 0;
-	@:isVar public var state(default, set):IState;
+	//@:isVar public var state(default, set):IState;
+	@:isVar public var condition(default, set):Condition;
 	
-	public function new(showTime:Float = 1, hideTime:Float = 1, showDelay:Float = 0, hideDelay:Float = 0, startHidden:Bool = true) 
+	public function new(?showTime:Float = 1, ?hideTime:Float = 1, ?showDelay:Float = 0, ?hideDelay:Float = 0, ?startHidden:Bool = true, ?condition:Condition) 
 	{
 		this.showTime = showTime;
 		this.hideTime = hideTime;
 		this.showDelay = showDelay;
 		this.hideDelay = hideDelay;
 		this.startHidden = startHidden;
+		
 		
 		if (linearEaseNone == null) linearEaseNone = new LinearEaseNone();
 		//onShowUpdate.add(ActivityModel.animating);
@@ -83,6 +86,8 @@ class Transition
 		progress.add(onProgressChange);
 		if (startHidden) progress.value = -1;
 		else progress.value = 0;
+
+		this.condition = condition;
 	}
 	
 	function onProgressChange() 
@@ -174,7 +179,13 @@ class Transition
 	}
 	
 	// --------------------------------------------------- //
-	
+	public function stop(value:Float)
+	{
+		killDelays();
+		stopCurrentTween();
+		this.value = value;
+	}
+
 	public function Show():Void
 	{
 		if (isTweening.value && queueTransitions) {
@@ -222,11 +233,7 @@ class Transition
 	
 	function showTween():Void 
 	{
-		Actuate.stop(this);
-		if (tween != null) {
-			Actuate.unload(tween);
-		}
-		
+		stopCurrentTween();
 		tween = Actuate.tween(this, showTime, { value:0 } ).onUpdate(privateShowOnUpdate).onComplete(privateShowOnComplete).ease(linearEaseNone);
 		privateShowOnStart();
 	}
@@ -299,12 +306,17 @@ class Transition
 	
 	function hideTween():Void
 	{
+		stopCurrentTween();
+		tween = Actuate.tween(this, hideTime, { value:1 } ).onUpdate(privateHideOnUpdate).onComplete(privateHideOnComplete).ease(linearEaseNone);
+		privateHideOnStart();
+	}
+
+	function stopCurrentTween()
+	{
 		Actuate.stop(this);
 		if (tween != null){
 			Actuate.unload(tween);
 		}
-		tween = Actuate.tween(this, hideTime, { value:1 } ).onUpdate(privateHideOnUpdate).onComplete(privateHideOnComplete).ease(linearEaseNone);
-		privateHideOnStart();
 	}
 	
 	function hideJump():Void 
@@ -395,19 +407,19 @@ class Transition
 		return progress.value = value;
 	}
 
-	function set_state(value:IState):IState
+	function set_condition(value:Condition):Condition
 	{
-		if (state != null){
-			state.onActive.remove(Show);
-			state.onInactive.remove(Hide);
+		if (condition != null){
+			condition.onActive.remove(Show);
+			condition.onInactive.remove(Hide);
 		}
-		state = value;
-		if (state != null){
-			state.onActive.add(Show);
-			state.onInactive.add(Hide);
-			if (state.value) Show();
+		condition = value;
+		if (condition != null){
+			condition.onActive.add(Show);
+			condition.onInactive.add(Hide);
+			if (condition.value) Show();
 			else Hide();
 		}
-		return state;
+		return condition;
 	}
 }

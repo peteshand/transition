@@ -4,7 +4,7 @@
 	"license": "MIT",
 	"tags": ["transition", "tween"],
 	"description": "library to define and trigger scene change tweens",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"releasenote": "update dependencies",
 	"contributors": [ "p.j.shand" ],
 	"classPath": "src/",

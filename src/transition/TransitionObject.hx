@@ -151,19 +151,22 @@ class TransitionObject implements ITransitionObject
 			
 			var value:Array<Dynamic> = Reflect.getProperty(_properties, property);
 			var _hasSetter = hasSetter(target, property);
+
 			var setter:Float -> Void;
 			//var plugin:Plugin = TransitionPlugins.getPlugin(property);
 			if (_hasSetter){
 				#if cpp
 					var innerSetter:Float->Void = untyped Reflect.getProperty(target, "set_" + property);
 				#else 
-					var innerSetter:Float->Void = untyped target["set_" + property];
+					var innerSetter:Float->Float = untyped target["set_" + property];
 				#end
-				
 				setter = getSetter(target, property, innerSetter, option);
+				
+				
 			}else{
 				setter = getProp(target, property, option);
 			}
+
 			transitionPropsMap.set(property, { value:value, setter:setter } );
 			
 		}
@@ -193,14 +196,14 @@ class TransitionObject implements ITransitionObject
 		}
 	}
 	
-	function hasSetter(obj:Dynamic, value:String, prefix:String="set_"):Bool
+	function hasSetter(obj:Dynamic, prop:String, prefix:String="set_"):Bool
 	{
 		#if flash
-		return Reflect.hasField(obj, prefix + value);
+		return Reflect.hasField(obj, prefix + prop);
 		#else
 		try {
-			untyped obj[prefix + value];
-			return true;
+			var setMethod = untyped obj[prefix + prop];
+			return setMethod != null;
 		} catch( e : Dynamic ) try {
 			return false;
 		}
