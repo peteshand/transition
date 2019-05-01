@@ -2,7 +2,7 @@ package transition;
 
 import haxe.Timer;
 import notifier.Notifier;
-//import condition.IState;
+import notifier.bind.Bind;
 import condition.Condition;
 import motion.Actuate;
 import motion.actuators.GenericActuator;
@@ -63,9 +63,9 @@ class Transition
 	public var startHidden:Bool = true;
 
 	@:isVar public var value(get, set):Float = 0;
-	//@:isVar public var state(default, set):IState;
 	@:isVar public var condition(default, set):Condition;
-	
+	var unbindCondition:Void -> Void;
+
 	public function new(?showTime:Float = 1, ?hideTime:Float = 1, ?showDelay:Float = 0, ?hideDelay:Float = 0, ?startHidden:Bool = true, ?condition:Condition) 
 	{
 		this.showTime = showTime;
@@ -186,10 +186,10 @@ class Transition
 		this.value = value;
 	}
 
-	public function Show():Void
+	public function show():Void
 	{
 		if (isTweening.value && queueTransitions) {
-			queue(Show);
+			queue(show);
 			return;
 		}
 		
@@ -246,10 +246,10 @@ class Transition
 		privateShowOnComplete();
 	}
 	
-	public function Hide():Void
+	public function hide():Void
 	{
 		if (isTweening.value && queueTransitions) {
-			queue(Hide);
+			queue(hide);
 			return;
 		}
 		if (showing == false) return;
@@ -409,17 +409,9 @@ class Transition
 
 	function set_condition(value:Condition):Condition
 	{
-		if (condition != null){
-			condition.onActive.remove(Show);
-			condition.onInactive.remove(Hide);
-		}
-		condition = value;
-		if (condition != null){
-			condition.onActive.add(Show);
-			condition.onInactive.add(Hide);
-			if (condition.value) Show();
-			else Hide();
-		}
-		return condition;
+		if (unbindCondition != null) unbindCondition(); unbindCondition = null;
+		if (value != null) unbindCondition = Bind.toggle(value.active, show, hide);
+
+		return condition = value;
 	}
 }
