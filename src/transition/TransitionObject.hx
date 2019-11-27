@@ -5,26 +5,27 @@ import transition.TransitionSettings;
 import motion.easing.Expo;
 import motion.easing.IEasing;
 import motion.easing.Quad;
-import signal.Signal;
+import signals.Signal;
 
 /**
  * ...
  * @author P.J.Shand
  */
-class TransitionObject implements ITransitionObject
-{
+class TransitionObject implements ITransitionObject {
 	public var target:Target;
-	var transitionPropsMap = new Map<String,TransitionProps>();
+
+	var transitionPropsMap = new Map<String, TransitionProps>();
 	var transitingIn:Bool;
-	
+
 	var value:Float = -2;
-	
+
 	var optionProperties:Array<String>;
 	var properties:Dynamic = {};
 	var visSetter:Dynamic;
+
 	public var option:TransitionSettings = {};
 	public var onSet = new Signal();
-	
+
 	// Update vars
 	var uStartValue:Float;
 	var uEndValue:Float;
@@ -32,210 +33,208 @@ class TransitionObject implements ITransitionObject
 	var uHideEase:IEasing;
 	var uCorrectedValue:Float;
 	var uNewValue:Float;
-	
+
 	var uEnd:Float;
 	var uStart:Float;
 	var uNewEnd:Float;
 	var uProp:TransitionProps;
-	
-	public function new(target:Target) 
-	{
+
+	public function new(target:Target) {
 		this.target = target;
 	}
-	
-	public function showEase(ease:IEasing):ITransitionObject
-	{
+
+	public function showEase(ease:IEasing):ITransitionObject {
 		option.showEase = ease;
 		return set(properties, option);
 	}
-	
-	public function hideEase(value:IEasing):ITransitionObject
-	{
+
+	public function hideEase(value:IEasing):ITransitionObject {
 		option.showEase = value;
 		return set(properties, option);
 	}
-	
-	//public function autoVisible(value:Bool):ITransitionObject
-	//{
-		//option.autoVisible = value;
-		//updateAutoVis();
-		//return set(properties, option);
-	//}
-	
-	public function autoVisObject(value:Dynamic):ITransitionObject
-	{
-		if (option.autoVisObject != null && visSetter != null) visSetter(true);
+
+	// public function autoVisible(value:Bool):ITransitionObject
+	// {
+	// option.autoVisible = value;
+	// updateAutoVis();
+	// return set(properties, option);
+	// }
+
+	public function autoVisObject(value:Dynamic):ITransitionObject {
+		if (option.autoVisObject != null && visSetter != null)
+			visSetter(true);
 
 		option.autoVisObject = value;
 		updateAutoVis();
 		return set(properties, option);
 	}
-	
-	public function ease(value:IEasing):ITransitionObject
-	{
+
+	public function ease(value:IEasing):ITransitionObject {
 		option.ease = value;
 		return set(properties, option);
 	}
-	
-	public function start(value:Float):ITransitionObject
-	{
+
+	public function range(start:Float, fractionDuration:Float):ITransitionObject {
+		option.start = start;
+		option.end = start + fractionDuration;
+		if (option.end > 1)
+			option.end = 1;
+		set(properties, option);
+		return this;
+	}
+
+	public function start(value:Float):ITransitionObject {
 		option.start = value;
 		set(properties, option);
 		return this;
 	}
-	
-	public function end(value:Float):ITransitionObject
-	{
+
+	public function end(value:Float):ITransitionObject {
 		option.end = value;
 		return set(properties, option);
 	}
-	
-	function setDefault(option:TransitionSettings):Void
-	{
-		if (option.ease == null) option.ease = Expo.easeInOut;
-		if (option.start == null) option.start = 0;
-		if (option.end == null) option.end = 1;
-		if (option.startHidden == null) option.startHidden = true;
-		//if (option.autoVisible == null) option.autoVisible = false;
-		if (option.autoVisObject == null) option.autoVisObject = target;
+
+	function setDefault(option:TransitionSettings):Void {
+		if (option.ease == null)
+			option.ease = Expo.easeInOut;
+		if (option.start == null)
+			option.start = 0;
+		if (option.end == null)
+			option.end = 1;
+		if (option.startHidden == null)
+			option.startHidden = true;
+		// if (option.autoVisible == null) option.autoVisible = false;
+		if (option.autoVisObject == null)
+			option.autoVisObject = target;
 	}
-	
-	public function set(_properties:Dynamic=null, _option:TransitionSettings=null):ITransitionObject 
-	{
-		if (_option != null) option = _option;
+
+	public function set(_properties:Dynamic = null, _option:TransitionSettings = null):ITransitionObject {
+		if (_option != null)
+			option = _option;
 		setDefault(option);
 
-		if (_properties == null){
-			_properties = { alpha:[0, 1] };
+		if (_properties == null) {
+			_properties = {alpha: [0, 1]};
 		}
-		if (_properties != null) properties = _properties;
-		
-		//if (_properties == null) {
-			//option.autoVisible = true;
-		//}
-		
-		var propertiesToAddfields = Reflect.fields (_properties);
-		for (property in propertiesToAddfields)
-		{	
+		if (_properties != null)
+			properties = _properties;
+
+		// if (_properties == null) {
+		// option.autoVisible = true;
+		// }
+
+		var propertiesToAddfields = Reflect.fields(_properties);
+		for (property in propertiesToAddfields) {
 			var classType = getClass(Reflect.getProperty(_properties, property));
 			if (classType != Array) {
 				throw "Incorrect property type: " + classType + ". Expecting Array of length 2, [ShowValue, HideValue]";
 				continue;
 			}
 			var prop:Array<Dynamic> = Reflect.getProperty(_properties, property);
-			
+
 			if (Reflect.getProperty(prop, 'length') < 2 || Reflect.getProperty(prop, 'length') > 3) {
 				throw "Expecting Array of length 2, [HideValue, ShowValue]\nor or 3 [StartHideValue, ShowValue, EndHideValue]";
 				continue;
 			}
-			
-			for (i in 0...prop.length) 
-			{
-				if (Std.is(prop[i], String)) { 
+
+			for (i in 0...prop.length) {
+				if (Std.is(prop[i], String)) {
 					var strProp:String = prop[i];
 					if (strProp.substr(0, 1) == "-") {
 						prop[i] = Reflect.getProperty(target, property) - Std.parseFloat(strProp.substring(1, strProp.length));
-					}
-					else if (strProp.substr(0, 1) == "+") {
+					} else if (strProp.substr(0, 1) == "+") {
 						prop[i] = Reflect.getProperty(target, property) + Std.parseFloat(strProp.substring(1, strProp.length));
-					}
-					else {
+					} else {
 						prop[i] = Reflect.getProperty(target, property) + Std.parseFloat(strProp);
 					}
-				}	
+				}
 			}
-			
+
 			if (prop.length == 2) {
 				prop[2] = prop[0];
 			}
-			
+
 			var value:Array<Dynamic> = Reflect.getProperty(_properties, property);
 			var _hasSetter = hasSetter(target, property);
 
-			var setter:Float -> Void;
-			//var plugin:Plugin = TransitionPlugins.getPlugin(property);
-			if (_hasSetter){
+			var setter:Float->Void;
+			// var plugin:Plugin = TransitionPlugins.getPlugin(property);
+			if (_hasSetter) {
 				#if cpp
-					var innerSetter:Float->Void = untyped Reflect.getProperty(target, "set_" + property);
-				#else 
-					var innerSetter:Float->Float = untyped target["set_" + property];
+				var innerSetter:Float->Void = untyped Reflect.getProperty(target, "set_" + property);
+				#else
+				var innerSetter:Float->Float = untyped target["set_" + property];
 				#end
 				setter = getSetter(target, property, innerSetter, option);
-				
-				
-			}else{
+			} else {
 				setter = getProp(target, property, option);
 			}
 
-			transitionPropsMap.set(property, { value:value, setter:setter } );
-			
+			transitionPropsMap.set(property, {value: value, setter: setter});
 		}
-		
+
 		updateAutoVis();
-		
+
 		return cast this;
 	}
-	
-	function updateAutoVis() 
-	{
-		if (option.autoVisObject == null) return;
+
+	function updateAutoVis() {
+		if (option.autoVisObject == null)
+			return;
 		var _hasSetter = hasSetter(option.autoVisObject, "visible");
-		if (_hasSetter){
+		if (_hasSetter) {
 			#if cpp
-				var innerSetter:Float->Void = untyped Reflect.getProperty(target, "set_visible");
-			#else 
-				var innerSetter:Bool->Void = untyped target["set_visible"];
+			var innerSetter:Float->Void = untyped Reflect.getProperty(target, "set_visible");
+			#else
+			var innerSetter:Bool->Void = untyped target["set_visible"];
 			#end
-			
+
 			visSetter = getSetter(target, "visible", innerSetter, option);
-		}else {
+		} else {
 			var hasProp:Bool = hasSetter(option.autoVisObject, "visible", "");
-			if (hasProp){
+			if (hasProp) {
 				visSetter = getProp(target, "visible", option);
 			}
 		}
 	}
-	
-	function hasSetter(obj:Dynamic, prop:String, prefix:String="set_"):Bool
-	{
+
+	function hasSetter(obj:Dynamic, prop:String, prefix:String = "set_"):Bool {
 		#if flash
 		return Reflect.hasField(obj, prefix + prop);
 		#else
 		try {
 			var setMethod = untyped obj[prefix + prop];
 			return setMethod != null;
-		} catch( e : Dynamic ) try {
-			return false;
-		}
+		} catch (e:Dynamic)
+			try {
+				return false;
+			}
 		#end
 	}
-	
+
 	function getClass(obj:Dynamic):Class<Dynamic> {
 		return Type.getClass(obj);
 	}
-	
-	public function remove(propertiesToRemove:Dynamic):Void 
-	{
+
+	public function remove(propertiesToRemove:Dynamic):Void {
 		var fields = Reflect.fields(propertiesToRemove);
 		for (property in fields) {
-			
 			transitionPropsMap.remove(property);
 		}
 	}
-	
-	public function dispose():Void 
-	{
+
+	public function dispose():Void {
 		target = null;
 		transitionPropsMap = null;
 		visSetter = null;
 		uProp = null;
 		onSet.remove();
 	}
-	
-	public function update(value:Float):Void 
-	{
-		if (this.value == value) return;
-		
+
+	public function update(value:Float):Void {
+		if (this.value == value)
+			return;
+
 		this.value = value;
 		uEnd = option.end;
 		uStart = option.start;
@@ -244,130 +243,112 @@ class TransitionObject implements ITransitionObject
 			uStart = 1 - uEnd;
 			uEnd = uNewEnd;
 		}
-		
-		for (key in transitionPropsMap.keys())
-		{
+
+		for (key in transitionPropsMap.keys()) {
 			uProp = transitionPropsMap.get(key);
-			
+
 			if (value < 0) {
 				uStartValue = uProp.value[0];
 				uEndValue = uProp.value[1];
 				uNewValue = value + 1;
-			}
-			else {
+			} else {
 				uStartValue = uProp.value[1];
-				if (uProp.value[2] == null) continue;
+				if (uProp.value[2] == null)
+					continue;
 				uEndValue = uProp.value[2];
 				uNewValue = value;
 			}
-			
-			
-			
+
 			uCorrectedValue = uNewValue / (uEnd - uStart);
 			uCorrectedValue -= uStart / (uEnd - uStart);
-			if (uCorrectedValue < 0) uCorrectedValue = 0;
-			if (uCorrectedValue > 1) uCorrectedValue = 1;
-			
+			if (uCorrectedValue < 0)
+				uCorrectedValue = 0;
+			if (uCorrectedValue > 1)
+				uCorrectedValue = 1;
+
 			uShowEase = option.showEase;
 			uHideEase = option.hideEase;
-			if (uShowEase == null) uShowEase = option.ease;
-			if (uHideEase == null) uHideEase = option.ease;
-			
-			if (transitingIn) uCorrectedValue = uShowEase.calculate(uCorrectedValue);
-			else uCorrectedValue = uHideEase.calculate(uCorrectedValue);
-			
-			if (uCorrectedValue < 0) uCorrectedValue = 0;
-			if (uCorrectedValue > 1) uCorrectedValue = 1;
-			
+			if (uShowEase == null)
+				uShowEase = option.ease;
+			if (uHideEase == null)
+				uHideEase = option.ease;
+
+			if (transitingIn)
+				uCorrectedValue = uShowEase.calculate(uCorrectedValue);
+			else
+				uCorrectedValue = uHideEase.calculate(uCorrectedValue);
+
+			if (uCorrectedValue < 0)
+				uCorrectedValue = 0;
+			if (uCorrectedValue > 1)
+				uCorrectedValue = 1;
+
 			var value = uStartValue + ((uEndValue - uStartValue) * uCorrectedValue);
 			#if flash
-				uProp.setter(value);
+			uProp.setter(value);
 			#else
-				Reflect.setProperty(target, key, value);
+			Reflect.setProperty(target, key, value);
 			#end
-			
+
 			if (visSetter != null && key == "alpha") {
 				if (value == 0) {
 					visSetter(false);
-				}
-				else {
+				} else {
 					visSetter(true);
 				}
 			}
 		}
-		
 	}
-	
-	public function showBegin():Void 
-	{
+
+	public function showBegin():Void {
 		transitingIn = true;
 	}
-	
-	public function showEnd():Void 
-	{
-		
-	}
-	
-	public function hideBegin():Void 
-	{
+
+	public function showEnd():Void {}
+
+	public function hideBegin():Void {
 		transitingIn = false;
 	}
-	
-	public function hideEnd():Void 
-	{
-		
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	public function getProp(target:Dynamic, prop:String, option:TransitionSettings) : Dynamic->Void
-	{
+
+	public function hideEnd():Void {}
+
+	public function getProp(target:Dynamic, prop:String, option:TransitionSettings):Dynamic->Void {
 		return applyProp.bind(target, prop, _);
 	}
-	public function getSetter(target:Dynamic, prop:String, innerSetter:Dynamic->Void, option:TransitionSettings) : Dynamic->Void
-	{
+
+	public function getSetter(target:Dynamic, prop:String, innerSetter:Dynamic->Void, option:TransitionSettings):Dynamic->Void {
 		return applySetter.bind(target, innerSetter, _);
 	}
-	
-	public function applyProp(target:Dynamic, prop:String, value:Dynamic) 
-	{
+
+	public function applyProp(target:Dynamic, prop:String, value:Dynamic) {
 		#if cpp
-			untyped Reflect.setProperty(target, prop, value);
-		#else 
-			untyped target[prop] = value;
+		untyped Reflect.setProperty(target, prop, value);
+		#else
+		untyped target[prop] = value;
 		#end
 	}
-	
-	public function applySetter(target:Dynamic, innerSetter:Dynamic->Void, value:Dynamic) 
-	{
+
+	public function applySetter(target:Dynamic, innerSetter:Dynamic->Void, value:Dynamic) {
 		#if !js
-			innerSetter(value);
+		innerSetter(value);
 		#else
-			untyped innerSetter.call(target, Math.round(value));
+		untyped innerSetter.call(target, Math.round(value));
 		#end
 	}
 }
 
-typedef Frame =
-{
+typedef Frame = {
 	var x:Float;
 	var y:Float;
 	var width:Float;
 	var height:Float;
 }
 
-typedef Target =
-{
+typedef Target = {
 	?visible:Bool
 }
 
-typedef TransitionProps =
-{
+typedef TransitionProps = {
 	value:Array<Dynamic>,
 	setter:Float->Void
 }
